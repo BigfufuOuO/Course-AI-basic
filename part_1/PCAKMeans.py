@@ -55,9 +55,8 @@ class PCA:
 
     def transform(self, X:np.ndarray):
         # X: [n_samples, n_features]
-        X_reduced = np.zeros((X.shape[0], self.n_components))
         # TODO: transform the data to low dimension
-        X_reduced = np.dot(X, self.Matrix_reduction)
+        X_reduced = np.dot(X.T, self.Matrix_reduction)
         return X_reduced
 
 class KMeans:
@@ -66,6 +65,7 @@ class KMeans:
         self.max_iter = max_iter
         self.centers = None
         self.labels = None
+        self.k = n_clusters
 
     # Randomly initialize the centers
     def initialize_centers(self, points):
@@ -88,19 +88,26 @@ class KMeans:
         self.labels = np.zeros(n_samples)
         # TODO: Compute the distance between each point and each center
         # and Assign each point to the closest center
-
+        for i in range(n_samples):
+            self.labels[i] = np.argmin(np.linalg.norm(self.centers - points[i], axis=1)) # L2 norm
         return self.labels
 
     # Update the centers based on the new assignment of points
     def update_centers(self, points):
         # points: (n_samples, n_dims,)
         # TODO: Update the centers based on the new assignment of points
+        for k in range(self.k):
+            self.centers[k] = points[self.labels == k].mean(axis=0)
         pass
 
     # k-means clustering
     def fit(self, points):
         # points: (n_samples, n_dims,)
         # TODO: Implement k-means clustering
+        while self.max_iter > 0:
+            self.assign_points(points)
+            self.update_centers(points)
+            self.max_iter -= 1
         pass
 
     # Predict the closest cluster each sample in X belongs to
@@ -119,7 +126,7 @@ def load_data():
         'disease', 'infection', 'cancer', 'illness', 
         'twitter', 'facebook', 'chat', 'hashtag', 'link', 'internet',
     ]
-    w2v = KeyedVectors.load_word2vec_format('./data/GoogleNews-vectors-negative300.bin', binary = True)
+    w2v = KeyedVectors.load_word2vec_format('./part_1/data/GoogleNews-vectors-negative300.bin', binary = True)
     vectors = []
     for w in words:
         vectors.append(w2v[w].reshape(1, 300))
@@ -128,10 +135,13 @@ def load_data():
 
 if __name__=='__main__':
     words, data = load_data()
-    pca = PCA(n_components=2).fit(data)
+    pca = PCA(n_components=2, kernel="rbf")
+    pca.fit(data)
     data_pca = pca.transform(data)
 
-    kmeans = KMeans(n_clusters=7).fit(data_pca)
+    kmeans = KMeans(n_clusters=7, max_iter=10)
+    kmeans.initialize_centers(data_pca)
+    kmeans.fit(data_pca)
     clusters = kmeans.predict(data_pca)
 
     # plot the data
@@ -140,5 +150,5 @@ if __name__=='__main__':
     plt.scatter(data_pca[:, 0], data_pca[:, 1], c=clusters)
     for i in range(len(words)):
         plt.annotate(words[i], data_pca[i, :]) 
-    plt.title("Your student ID")
+    plt.title("PB21061361")
     plt.savefig("PCA_KMeans.png")

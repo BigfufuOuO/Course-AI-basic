@@ -1,6 +1,7 @@
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from Debug import NumpyJSONEncoder
 import numpy as np 
 import pandas as pd 
 import pdb
@@ -16,8 +17,9 @@ def accuracy(y_true, y_pred):
 class DecisionTreeClassifier:
     def __init__(self) -> None:
         self.tree = None
-        self.continous_features = ['Age', 'Height', 'Weight', 'NCP', 'CH2O', 'FAF']
-        self.discrete_features = ['Gender', 'CALC', 'FAVC', 'FCVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'TUE', 'CAEC', 'MTRANS']
+        self.continous_features = ['Age', 'Height', 'Weight', 'FCVC', 'NCP', 'CH2O', 'FAF', 'TUE']
+        self.discrete_features = ['Gender', 'CALC', 'FAVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'CAEC', 'MTRANS']
+        self.discrete_features_size = {'Gender':2, 'CALC':4, 'FAVC':2, 'SCC':2, 'SMOKE':2, 'family_history_with_overweight':2, 'CAEC':4, 'MTRANS':5}
         self.misscount = 0
         
     def _isXsplit(self, X):
@@ -53,7 +55,7 @@ class DecisionTreeClassifier:
         for feature in X.columns:
             entropy_feature = 0
             iv = 0
-            if X[feature].dtype == 'float64':
+            if feature in self.continous_features:
                 T = []
                 sublist = []
                 unique_set = np.unique(X[feature])
@@ -86,9 +88,10 @@ class DecisionTreeClassifier:
 
     
     def _debugTree(self, tree:dict):
-        with open ('tree.csv', 'w') as f:
-            df = pd.DataFrame(tree)
-            df.to_csv(f)
+        encoder = NumpyJSONEncoder(tree)
+        tree_json = encoder.to_json()
+        with open ('tree.json', 'w') as f:
+            json.dump(tree_json, f, indent=4)
 
     def fit(self, X, y):
         # X: [n_samples_train, n_features], 
@@ -113,9 +116,9 @@ class DecisionTreeClassifier:
             tree[bestFeature]['<{}'.format(float_split)] = self.fit(X[X[bestFeature] < float_split].drop(columns=[bestFeature]), y[less_index])
             tree[bestFeature]['>={}'.format(float_split)] = self.fit(X[X[bestFeature] >= float_split].drop(columns=[bestFeature]), y[greater_index])
         else:
-            for value in np.unique(X[bestFeature]):
+            for value in range(self.discrete_features_size[bestFeature]):
                 index = np.where(X[bestFeature] == value)
-                if len(index) == 0:
+                if len(index[0]) == 0:
                     tree[bestFeature][value] = np.argmax(np.bincount(y))
                     continue
                 else:
@@ -152,6 +155,7 @@ class DecisionTreeClassifier:
         else:
             query = tree[feature].get(value, None)
             if not query:
+                self.misscount += 1
                 # search all the keys in the tree, find the biggest probability
                 return self._getBiggestProb(tree[feature])
             if type(tree[feature][value]) != dict:
@@ -173,8 +177,8 @@ class DecisionTreeClassifier:
 
 def load_data(datapath:str='./data/ObesityDataSet_raw_and_data_sinthetic.csv'):
     df = pd.read_csv(datapath)
-    continue_features = ['Age', 'Height', 'Weight', 'NCP', 'CH2O', 'FAF']
-    discrete_features = ['Gender', 'CALC', 'FAVC', 'FCVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'TUE', 'CAEC', 'MTRANS']
+    continue_features = ['Age', 'Height', 'Weight', 'FCVC', 'NCP', 'CH2O', 'FAF', 'TUE']
+    discrete_features = ['Gender', 'CALC', 'FAVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'CAEC', 'MTRANS']
     
     X, y = df.iloc[:, :-1], df.iloc[:, -1]
     # encode discrete str to number, eg. male&female to 0&1
@@ -194,4 +198,4 @@ if __name__=="__main__":
     clf._debugTree(tree)
     
     y_pred = clf.predict(X_test, tree)
-    print(accuracy(y_test, y_pred))
+    print(accuracy(y_test, y_pred), clf.misscount)

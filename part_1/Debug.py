@@ -31,12 +31,6 @@ class NumpyJSONEncoder:
 
     def to_json(self):
         converted_data = self.convert_dict(self.data)
-        return json.dumps(converted_data)
+        return converted_data
 
-# 使用示例
-a = {'qq': {np.int32(1): 'c'}, np.int32(2): 'b'}
 
-encoder = NumpyJSONEncoder(a)
-a_json = encoder.to_json()
-
-print(a_json)
