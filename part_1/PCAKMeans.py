@@ -48,6 +48,7 @@ class PCA:
         idx = eigenvalues.argsort()[::-1]
         eigenvalues = eigenvalues[idx]
         eigenvectors = eigenvectors[:, idx]
+        eigenvectors = eigenvectors / np.sqrt(eigenvalues)
         
         # reduction matrix
         self.Matrix_reduction = eigenvectors[:, :self.n_components]
@@ -139,14 +140,14 @@ if __name__=='__main__':
     pca.fit(data)
     data_pca = pca.transform(data)
 
-    kmeans = KMeans(n_clusters=7, max_iter=10)
+    kmeans = KMeans(n_clusters=7, max_iter=15)
     kmeans.initialize_centers(data_pca)
     kmeans.fit(data_pca)
     clusters = kmeans.predict(data_pca)
 
     # plot the data
     
-    plt.figure()
+    plt.figure(figsize=(10, 10))
     plt.scatter(data_pca[:, 0], data_pca[:, 1], c=clusters)
     for i in range(len(words)):
         plt.annotate(words[i], data_pca[i, :]) 
