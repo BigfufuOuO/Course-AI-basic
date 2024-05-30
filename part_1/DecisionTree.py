@@ -152,14 +152,24 @@ class DecisionTreeClassifier:
         else:
             query = tree[feature].get(value, None)
             if not query:
-                self.misscount += 1
-                # get the nearest
-                query = min(tree[feature].keys(), key=lambda k: abs(k - value))
-                value = query
+                # search all the keys in the tree, find the biggest probability
+                return self._getBiggestProb(tree[feature])
             if type(tree[feature][value]) != dict:
                 return tree[feature][value]
             else:
                 return self._singlePredict(x, tree[feature][value])
+            
+    def _getBiggestProb(self, tree):
+        counts = dict()
+        def dfs(tree):
+            for key, value in tree.items():
+                if type(value) == dict:
+                    dfs(value)
+                else:
+                    counts[value] = counts.get(value, 0) + 1
+        
+        dfs(tree)
+        return max(counts, key=counts.get) # return the key with the biggest value
 
 def load_data(datapath:str='./data/ObesityDataSet_raw_and_data_sinthetic.csv'):
     df = pd.read_csv(datapath)

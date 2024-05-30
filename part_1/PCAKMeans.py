@@ -6,24 +6,47 @@ from gensim.models import KeyedVectors
 
 def get_kernel_function(kernel:str):
     # TODO: implement different kernel functions 
-    return None
+    kenerl_dict = {
+        "linear": lambda x, y: np.dot(x, y),
+        "poly": lambda x, y: (np.dot(x, y) + 1) ** 3,
+        "rbf": lambda x, y: np.exp(-np.linalg.norm(x - y) ** 2 / 2), # Gaussian kernel
+        "sigmoid": lambda x, y: np.tanh(np.dot(x, y) + 1),
+    }
+    return kenerl_dict[kernel]
 
 class PCA:
     def __init__(self, n_components:int=2, kernel:str="rbf") -> None:
         self.n_components = n_components
         self.kernel_f = get_kernel_function(kernel)
-        # ...
+        self.Matrix_reduction = None
+        
+    def _computerKernelMatrix(self, X, kernel):
+        # X: [n_samples, n_features]
+        n_samples = X.shape[0]
+        kenerl_matrix = np.zeros((n_samples, n_samples))
+        for i in range(n_samples):
+            for j in range(n_samples):
+                kenerl_matrix[i, j] = kernel(X[i], X[j])
+        return kenerl_matrix
+        pass
 
+    def _computeKernelCentered(self, K):
+        
+        pass
+        
     def fit(self, X:np.ndarray):
         # X: [n_samples, n_features]
         # TODO: implement PCA algorithm
+        # centralize the data
+        kenerl_matrix = self._computerKernelMatrix(X, self.kernel_f)
+        K_centered = self._computeKernelCentered(kenerl_matrix)
         pass
 
     def transform(self, X:np.ndarray):
         # X: [n_samples, n_features]
         X_reduced = np.zeros((X.shape[0], self.n_components))
-
         # TODO: transform the data to low dimension
+        X_reduced = np.dot(X, self.Matrix_reduction)
         return X_reduced
 
 class KMeans:
