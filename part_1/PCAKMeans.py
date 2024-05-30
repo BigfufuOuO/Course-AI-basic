@@ -20,7 +20,7 @@ class PCA:
         self.kernel_f = get_kernel_function(kernel)
         self.Matrix_reduction = None
         
-    def _computerKernelMatrix(self, X, kernel):
+    def _computerKernelMatrix(self, X:np.ndarray, kernel):
         # X: [n_samples, n_features]
         n_samples = X.shape[0]
         kenerl_matrix = np.zeros((n_samples, n_samples))
@@ -31,7 +31,10 @@ class PCA:
         pass
 
     def _computeKernelCentered(self, K):
-        
+        n_samples = K.shape[0]
+        one_n = np.ones((n_samples, n_samples)) / n_samples
+        K_centered = K - one_n.dot(K) - K.dot(one_n) + one_n.dot(K).dot(one_n)
+        return K_centered
         pass
         
     def fit(self, X:np.ndarray):
@@ -40,6 +43,14 @@ class PCA:
         # centralize the data
         kenerl_matrix = self._computerKernelMatrix(X, self.kernel_f)
         K_centered = self._computeKernelCentered(kenerl_matrix)
+        
+        eigenvalues, eigenvectors = np.linalg.eig(K_centered)
+        idx = eigenvalues.argsort()[::-1]
+        eigenvalues = eigenvalues[idx]
+        eigenvectors = eigenvectors[:, idx]
+        
+        # reduction matrix
+        self.Matrix_reduction = eigenvectors[:, :self.n_components]
         pass
 
     def transform(self, X:np.ndarray):
