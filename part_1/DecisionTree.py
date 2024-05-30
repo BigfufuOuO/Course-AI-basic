@@ -11,10 +11,14 @@ import json
 def accuracy(y_true, y_pred):
     return sum(y_true == y_pred) / len(y_true)
 
+
 # model
 class DecisionTreeClassifier:
     def __init__(self) -> None:
         self.tree = None
+        self.continous_features = ['Age', 'Height', 'Weight', 'NCP', 'CH2O', 'FAF']
+        self.discrete_features = ['Gender', 'CALC', 'FAVC', 'FCVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'TUE', 'CAEC', 'MTRANS']
+        self.misscount = 0
         
     def _isXsplit(self, X):
         for i in range(X.shape[1]):
@@ -48,6 +52,7 @@ class DecisionTreeClassifier:
         entropy = self._caculateEntropy(y)
         for feature in X.columns:
             entropy_feature = 0
+            iv = 0
             if X[feature].dtype == 'float64':
                 T = []
                 sublist = []
@@ -63,14 +68,18 @@ class DecisionTreeClassifier:
                     entropy_feature += len(greater_index[0]) / len(y) * self._caculateEntropy(y[greater_index])
                     sublist.append(entropy - entropy_feature)
                 if len(sublist) > 0:
-                    entropy_list.append([feature, max(sublist), 1, T[sublist.index(max(sublist))]])
+                    max_t = T[sublist.index(max(sublist))]
+                    Dv = len(np.where(X[feature] < max_t)[0]) / len(y)
+                    iv = -Dv * np.log2(Dv) - (1 - Dv) * np.log2(1 - Dv)
+                    entropy_list.append([feature, max(sublist) / iv, 1, T[sublist.index(max(sublist))]])
                 else:
                     entropy_list.append([feature, 0, 1, 0])
             else:
                 for value in np.unique(X[feature]):
                     index = np.where(X[feature] == value)
                     entropy_feature += len(index) / len(y) * self._caculateEntropy(y[index])
-                entropy_list.append([feature, entropy - entropy_feature, 0, 0])
+                    iv += -len(index) / len(y) * np.log2(len(index) / len(y))
+                entropy_list.append([feature, (entropy - entropy_feature)/iv, 0, 0])
         
         max_entropy = np.argmax(entropy_list, axis=0)[1]
         return entropy_list[max_entropy]
@@ -115,17 +124,47 @@ class DecisionTreeClassifier:
         return tree
         pass
 
-    def predict(self, X):
+    def predict(self, X, tree):
         # X: [n_samples_test, n_features],
+        # tree: a dictionary
         # return: y: [n_samples_test, ]
-        y = np.zeros(X.shape[0])
         # TODO:
+        y = np.zeros(X.shape[0])
+        for i in range(X.shape[0]):
+            y[i] = self._singlePredict(X.iloc[i], tree)
         return y
+
+    def _singlePredict(self, x, tree):
+        feature = list(tree.keys())[0]
+        value = x[feature]
+        if feature in self.continous_features:
+            compare = list(tree[feature].keys())[0].split('<')[1] # '<0.5' -> '0.5'
+            if value < float(compare):
+                if type(tree[feature]['<{}'.format(compare)]) != dict:
+                    return tree[feature]['<{}'.format(compare)]
+                else:
+                    return self._singlePredict(x, tree[feature]['<{}'.format(compare)])
+            else:
+                if type(tree[feature]['>={}'.format(compare)]) != dict:
+                    return tree[feature]['>={}'.format(compare)]
+                else:
+                    return self._singlePredict(x, tree[feature]['>={}'.format(compare)])
+        else:
+            query = tree[feature].get(value, None)
+            if not query:
+                self.misscount += 1
+                # get the nearest
+                query = min(tree[feature].keys(), key=lambda k: abs(k - value))
+                value = query
+            if type(tree[feature][value]) != dict:
+                return tree[feature][value]
+            else:
+                return self._singlePredict(x, tree[feature][value])
 
 def load_data(datapath:str='./data/ObesityDataSet_raw_and_data_sinthetic.csv'):
     df = pd.read_csv(datapath)
-    continue_features = ['Age', 'Height', 'Weight', ]
-    discrete_features = ['Gender', 'CALC', 'FAVC', 'FCVC', 'NCP', 'SCC', 'SMOKE', 'CH2O', 'family_history_with_overweight', 'FAF', 'TUE', 'CAEC', 'MTRANS']
+    continue_features = ['Age', 'Height', 'Weight', 'NCP', 'CH2O', 'FAF']
+    discrete_features = ['Gender', 'CALC', 'FAVC', 'FCVC', 'SCC', 'SMOKE', 'family_history_with_overweight', 'TUE', 'CAEC', 'MTRANS']
     
     X, y = df.iloc[:, :-1], df.iloc[:, -1]
     # encode discrete str to number, eg. male&female to 0&1
@@ -144,5 +183,5 @@ if __name__=="__main__":
     tree = clf.fit(X_train, y_train)
     clf._debugTree(tree)
     
-    y_pred = clf.predict(X_test)
+    y_pred = clf.predict(X_test, tree)
     print(accuracy(y_test, y_pred))
