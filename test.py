@@ -1,42 +1,5 @@
 import json
 import numpy as np
 
-class NumpyJSONEncoder:
-    def __init__(self, data):
-        self.data = data
-
-    @staticmethod
-    def convert_numpy(obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, (np.bool_, bool)):
-            return bool(obj)
-        elif isinstance(obj, (np.str_, str)):
-            return str(obj)
-        else:
-            return obj
-
-    @classmethod
-    def convert_dict(cls, d):
-        if isinstance(d, dict):
-            return {cls.convert_numpy(k): cls.convert_dict(v) for k, v in d.items()}
-        elif isinstance(d, list):
-            return [cls.convert_dict(i) for i in d]
-        else:
-            return cls.convert_numpy(d)
-
-    def to_json(self):
-        converted_data = self.convert_dict(self.data)
-        return json.dumps(converted_data)
-
-# 使用示例
-a = {'qq': {np.int32(1): 'c'}, np.int32(2): 'b'}
-
-encoder = NumpyJSONEncoder(a)
-a_json = encoder.to_json()
-
-print(a_json)
+one_n = np.ones((5,5)) / 5
+print(one_n)

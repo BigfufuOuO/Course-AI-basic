@@ -2,6 +2,7 @@ from sklearn.datasets import load_wine
 import numpy as np 
 import matplotlib.pyplot as plt
 from gensim.models import KeyedVectors
+from Debug import PicPoints
 
 
 def get_kernel_function(kernel:str):
@@ -9,7 +10,8 @@ def get_kernel_function(kernel:str):
     kenerl_dict = {
         "linear": lambda x, y: np.dot(x, y),
         "poly": lambda x, y: (np.dot(x, y) + 1) ** 3,
-        "rbf": lambda x, y: np.exp(-np.linalg.norm(x - y) ** 2 / 2), # Gaussian kernel
+        "rbf": lambda x, y: np.exp(-np.linalg.norm(x - y) ** 2 / 8), # Gaussian kernel
+        "laplacian": lambda x, y: np.exp(-np.linalg.norm(x - y) / 4), # Laplacian kernel
         "sigmoid": lambda x, y: np.tanh(np.dot(x, y) + 1),
     }
     return kenerl_dict[kernel]
@@ -42,22 +44,26 @@ class PCA:
         # TODO: implement PCA algorithm
         # centralize the data
         kenerl_matrix = self._computerKernelMatrix(X, self.kernel_f)
+        draw = PicPoints().to_mtrx(kenerl_matrix)
         K_centered = self._computeKernelCentered(kenerl_matrix)
         
         eigenvalues, eigenvectors = np.linalg.eig(K_centered)
         idx = eigenvalues.argsort()[::-1]
         eigenvalues = eigenvalues[idx]
         eigenvectors = eigenvectors[:, idx]
-        eigenvectors = eigenvectors / np.sqrt(eigenvalues)
+        eigenvectors = eigenvectors * np.sqrt(abs(eigenvalues))
         
         # reduction matrix
-        self.Matrix_reduction = eigenvectors[:, :self.n_components]
+        return eigenvectors[:, :self.n_components], kenerl_matrix
         pass
 
     def transform(self, X:np.ndarray):
         # X: [n_samples, n_features]
         # TODO: transform the data to low dimension
-        X_reduced = np.dot(X.T, self.Matrix_reduction)
+        A, K = self.fit(X)
+        # normalize the A
+        A = A / np.linalg.norm(A, axis=1, keepdims=True)
+        X_reduced = K.dot(A)
         return X_reduced
 
 class KMeans:
@@ -76,7 +82,7 @@ class KMeans:
         self.centers = np.zeros((self.k, d))
         for k in range(self.k):
             # use more random points to initialize centers, make kmeans more stable
-            random_index = np.random.choice(n, size=10, replace=False)
+            random_index = np.random.choice(n, size=1, replace=False)
             self.centers[k] = points[random_index].mean(axis=0)
         
         return self.centers
@@ -139,8 +145,11 @@ if __name__=='__main__':
     pca = PCA(n_components=2, kernel="rbf")
     pca.fit(data)
     data_pca = pca.transform(data)
+    
+    dbg = PicPoints()
+    dbg.plot(data_pca, words)
 
-    kmeans = KMeans(n_clusters=7, max_iter=15)
+    kmeans = KMeans(n_clusters=7, max_iter=10)
     kmeans.initialize_centers(data_pca)
     kmeans.fit(data_pca)
     clusters = kmeans.predict(data_pca)
