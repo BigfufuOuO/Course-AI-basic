@@ -10,7 +10,7 @@ def get_kernel_function(kernel:str):
     kenerl_dict = {
         "linear": lambda x, y: np.dot(x, y),
         "poly": lambda x, y: (np.dot(x, y) + 1) ** 3,
-        "rbf": lambda x, y: np.exp(-np.linalg.norm(x - y) ** 2 / 8), # Gaussian kernel
+        "rbf": lambda x, y: np.exp(-np.linalg.norm(x - y) ** 2 / 100), # Gaussian kernel
         "laplacian": lambda x, y: np.exp(-np.linalg.norm(x - y) / 4), # Laplacian kernel
         "sigmoid": lambda x, y: np.tanh(np.dot(x, y) + 1),
     }

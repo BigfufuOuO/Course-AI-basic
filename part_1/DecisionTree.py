@@ -170,7 +170,7 @@ class DecisionTreeClassifier:
                 if type(value) == dict:
                     dfs(value)
                 else:
-                    counts[value] = counts.get(value, 0) + 1
+                    counts[value] = counts.get(value, 0) + 1 
         
         dfs(tree)
         return max(counts, key=counts.get) # return the key with the biggest value

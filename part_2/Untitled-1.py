@@ -612,7 +612,7 @@ def validate(model, dataloader, epoch, device):
     
 
 # %%
-train_dataloader, val_dataloader = create_dataloader('./part_2/input.txt', tokenizer, chunk_size=50, batch_size=4096)
+train_dataloader, val_dataloader = create_dataloader('./part_2/input.txt', tokenizer, chunk_size=50, batch_size=512)
 model = SparseMoETransformer(vocab_size=len(tokenizer.char2index), seq_len=50, embed_size=64, n_layers=3, n_heads=8, num_experts=8, active_experts=2).to(device)
 model.to(device)
 
