@@ -49,21 +49,20 @@ class PCA:
         
         eigenvalues, eigenvectors = np.linalg.eig(K_centered)
         idx = eigenvalues.argsort()[::-1]
-        eigenvalues = eigenvalues[idx]
-        eigenvectors = eigenvectors[:, idx]
-        eigenvectors = eigenvectors * np.sqrt(abs(eigenvalues))
+        eigenvalues = eigenvalues[idx][:self.n_components]
+        eigenvectors = eigenvectors[:, idx][:, :self.n_components]
         
         # reduction matrix
-        return eigenvectors[:, :self.n_components], kenerl_matrix
+        return eigenvalues, eigenvectors, kenerl_matrix
         pass
 
     def transform(self, X:np.ndarray):
         # X: [n_samples, n_features]
         # TODO: transform the data to low dimension
-        A, K = self.fit(X)
+        V, A, K = self.fit(X)
         # normalize the A
-        A = A / np.linalg.norm(A, axis=1, keepdims=True)
-        X_reduced = K.dot(A)
+        # A = A / np.linalg.norm(A, axis=1, keepdims=True)
+        X_reduced = K @ A / np.sqrt(V)
         return X_reduced
 
 class KMeans:
@@ -82,7 +81,7 @@ class KMeans:
         self.centers = np.zeros((self.k, d))
         for k in range(self.k):
             # use more random points to initialize centers, make kmeans more stable
-            random_index = np.random.choice(n, size=1, replace=False)
+            random_index = np.random.choice(n, size=10, replace=False)
             self.centers[k] = points[random_index].mean(axis=0)
         
         return self.centers
@@ -104,7 +103,9 @@ class KMeans:
         # points: (n_samples, n_dims,)
         # TODO: Update the centers based on the new assignment of points
         for k in range(self.k):
-            self.centers[k] = points[self.labels == k].mean(axis=0)
+            clusters = points[self.labels == k]
+            if len(clusters) > 0:
+                self.centers[k] = clusters.mean(axis=0)
         pass
 
     # k-means clustering
@@ -112,9 +113,12 @@ class KMeans:
         # points: (n_samples, n_dims,)
         # TODO: Implement k-means clustering
         while self.max_iter > 0:
+            old = self.centers.copy()
             self.assign_points(points)
             self.update_centers(points)
             self.max_iter -= 1
+            if np.all(old == self.centers):
+                break
         pass
 
     # Predict the closest cluster each sample in X belongs to
